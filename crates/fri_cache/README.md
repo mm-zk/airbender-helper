@@ -1,4 +1,13 @@
 
+## Commands
+
+```
+cargo run --bin fri_cache
+
+cargo run --bin helper -- --proof-file testdata/1.json --server-url http://localhost:8085/rpc
+
+```
+
 ## Example commands
 
 ```shell
