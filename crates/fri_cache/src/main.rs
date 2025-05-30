@@ -3,15 +3,17 @@ use serde::{Deserialize, Serialize};
 use sled::Db;
 use std::sync::Arc;
 
+use serde_json::{Value, json};
+
 #[derive(Deserialize)]
-struct SendFRIRequest {
+struct SendFRIParams {
     public_input: String,
     bytecode_hash: String,
     payload: String,
 }
 
 #[derive(Deserialize)]
-struct GetFRIQuery {
+struct GetFRIParams {
     public_input: String,
     bytecode_hash: String,
 }
@@ -31,24 +33,64 @@ fn make_key(public_input: &str, bytecode_hash: &str) -> String {
     format!("{}:{}", public_input, bytecode_hash)
 }
 
-#[post("/sendFRI")]
-async fn send_fri(data: web::Json<SendFRIRequest>, state: web::Data<AppState>) -> impl Responder {
-    let key = make_key(&data.public_input, &data.bytecode_hash);
-    let _ = state.db.insert(key.as_bytes(), data.payload.as_bytes());
-    let _ = state.db.flush();
-    HttpResponse::Ok().body("Stored")
-}
+#[post("/rpc")]
+async fn rpc_handler(req: web::Json<Value>, state: web::Data<AppState>) -> impl Responder {
+    let jsonrpc = req.get("jsonrpc").and_then(Value::as_str).unwrap_or("");
+    let id = req.get("id").cloned().unwrap_or(json!(null));
+    let method = req.get("method").and_then(Value::as_str).unwrap_or("");
+    let params = req.get("params");
 
-#[get("/getFRI")]
-async fn get_fri(query: web::Query<GetFRIQuery>, state: web::Data<AppState>) -> impl Responder {
-    let key = make_key(&query.public_input, &query.bytecode_hash);
-    match state.db.get(key.as_bytes()) {
-        Ok(Some(value)) => {
-            let val = value.clone();
-            let payload = String::from_utf8_lossy(&val).to_string();
-            HttpResponse::Ok().body(payload)
+    if jsonrpc != "2.0" {
+        let err = json!({"jsonrpc":"2.0","error":{"code":-32600,"message":"Invalid JSON-RPC version"},"id":id});
+        return HttpResponse::BadRequest().json(err);
+    }
+
+    match method {
+        "sendFRI" => {
+            if let Some(p) = params {
+                if let Ok(params) = serde_json::from_value::<SendFRIParams>(p.clone()) {
+                    let key = make_key(&params.public_input, &params.bytecode_hash);
+                    let _ = state.db.insert(key.as_bytes(), params.payload.as_bytes());
+                    let _ = state.db.flush();
+                    let res = json!({"jsonrpc":"2.0","result":"Stored","id":id});
+                    HttpResponse::Ok().json(res)
+                } else {
+                    let err = json!({"jsonrpc":"2.0","error":{"code":-32602,"message":"Invalid params"},"id":id});
+                    HttpResponse::BadRequest().json(err)
+                }
+            } else {
+                let err = json!({"jsonrpc":"2.0","error":{"code":-32602,"message":"Missing params"},"id":id});
+                HttpResponse::BadRequest().json(err)
+            }
         }
-        _ => HttpResponse::NotFound().body("Not found"),
+        "getFRI" => {
+            if let Some(p) = params {
+                if let Ok(params) = serde_json::from_value::<GetFRIParams>(p.clone()) {
+                    let key = make_key(&params.public_input, &params.bytecode_hash);
+                    match state.db.get(key.as_bytes()) {
+                        Ok(Some(value)) => {
+                            let payload = String::from_utf8_lossy(&value).to_string();
+                            let res = json!({"jsonrpc":"2.0","result":payload,"id":id});
+                            HttpResponse::Ok().json(res)
+                        }
+                        _ => {
+                            let err = json!({"jsonrpc":"2.0","error":{"code":-32001,"message":"Not found"},"id":id});
+                            HttpResponse::Ok().json(err)
+                        }
+                    }
+                } else {
+                    let err = json!({"jsonrpc":"2.0","error":{"code":-32602,"message":"Invalid params"},"id":id});
+                    HttpResponse::BadRequest().json(err)
+                }
+            } else {
+                let err = json!({"jsonrpc":"2.0","error":{"code":-32602,"message":"Missing params"},"id":id});
+                HttpResponse::BadRequest().json(err)
+            }
+        }
+        _ => {
+            let err = json!({"jsonrpc":"2.0","error":{"code":-32601,"message":"Method not found"},"id":id});
+            HttpResponse::BadRequest().json(err)
+        }
     }
 }
 
@@ -93,8 +135,7 @@ async fn main() -> std::io::Result<()> {
     HttpServer::new(move || {
         App::new()
             .app_data(state.clone())
-            .service(send_fri)
-            .service(get_fri)
+            .service(rpc_handler)
             .service(index)
     })
     .bind(("127.0.0.1", 8085))?
