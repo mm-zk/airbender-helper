@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>WASM File Analyzer</title>
+    <style>
+        .section {
+            margin-bottom: 20px;
+        }
+
+        .hex-list {
+            font-family: monospace;
+        }
+
+        .match {
+            color: green;
+            font-weight: bold;
+        }
+
+        .no-match {
+            color: gray;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Fri Verifier</h1>
+    <h3>Please upload program proof file</h3>
+    <input type="file" id="fileInput">
+    <button id="processBtn">Process</button>
+
+    <div class="section" id="results" style="display:none;">
+        <h2>Public Input</h2>
+        <div class="hex-list" id="publicInput"></div>
+
+        <h2>Program Output</h2>
+        <div class="hex-list" id="programOutput"></div>
+
+        <h2>Known Hashes</h2>
+        <table border="1">
+            <thead>
+                <tr>
+                    <th>Hash Name</th>
+                    <th>Values</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody id="knownHashes"></tbody>
+        </table>
+    </div>
+
+    <script type="module">
+        import init, { verify_all_program_proof } from "./pkg/wasm_example.js";
+
+        const knownHashes = [
+            {
+                name: "Hash A",
+                values: [0xabcdef00, 0xabcdef01, 0xabcdef02, 0xabcdef03, 0xabcdef04, 0xabcdef05, 0xabcdef06, 0xabcdef07]
+            },
+            {
+                name: "Hash B",
+                values: [0x0fbddcd8, 0x6a106d91, 0xb87f8535, 0x8d357027, 0xe71fe695, 0x535203d7, 0x1d57c19d, 0x43ca3292]
+            }
+        ];
+
+        function u32ArrayToHex(arr) {
+            return arr.map(x => "0x" + x.toString(16).padStart(8, '0'));
+        }
+
+        function arraysEqual(a, b) {
+            return a.length === b.length && a.every((v, i) => v === b[i]);
+        }
+
+        async function main() {
+            await init();
+
+            document.getElementById("processBtn").addEventListener("click", async () => {
+                const input = document.getElementById("fileInput");
+                const file = input.files[0];
+                if (!file) return alert("Please choose a file first!");
+
+                const text = await file.text();
+
+                // Use the actual Rust function here:
+                const result = verify_all_program_proof(text);
+                const pubInput = result.slice(0, 8)
+                const progOutput = result.slice(8);
+
+                // Display public input
+                const pubHex = u32ArrayToHex(pubInput);
+                document.getElementById("publicInput").textContent = pubHex.join(', ');
+
+                // Display program output
+                const outHex = u32ArrayToHex(progOutput);
+                document.getElementById("programOutput").textContent = outHex.join(', ');
+
+                // Compare with known hashes
+                const tbody = document.getElementById("knownHashes");
+                tbody.innerHTML = '';
+                knownHashes.forEach(entry => {
+                    const isMatch = arraysEqual(entry.values, progOutput);
+                    const row = document.createElement("tr");
+
+                    const name = document.createElement("td");
+                    name.textContent = entry.name;
+
+                    const vals = document.createElement("td");
+                    vals.textContent = u32ArrayToHex(entry.values).join(', ');
+
+                    const status = document.createElement("td");
+                    status.textContent = isMatch ? "✅ Match" : "❌ No Match";
+                    status.className = isMatch ? "match" : "no-match";
+
+                    row.appendChild(name);
+                    row.appendChild(vals);
+                    row.appendChild(status);
+                    tbody.appendChild(row);
+                });
+
+                document.getElementById("results").style.display = "block";
+            });
+        }
+
+        main();
+    </script>
+</body>
+
+</html>
