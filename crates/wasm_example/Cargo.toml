@@ -1,0 +1,24 @@
+[package]
+name = "wasm_example"
+version = "0.1.0"
+edition = "2024"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+wasm-bindgen = "0.2"
+js-sys = "0.3"
+
+
+#cli = {git = "https://github.com/matter-labs/zksync-airbender", branch = "main" }
+cli = { path = "../../../zksync-airbender-2/tools/cli" }
+execution_utils = { path = "../../../zksync-airbender-2/execution_utils"}
+verifier_common = { path = "../../../zksync-airbender-2/verifier_common", default-features = false }
+full_statement_verifier  = { path = "../../../zksync-airbender-2/full_statement_verifier", default-features = false }
+
+field = { path = "../../../zksync-airbender-2/field", features=["no_inline"]}
+
+getrandom = { version = "0.3",  features = ["wasm_js"]}
+serde = { version = "1", default-features = false, features = ["derive", "alloc"] }
+serde_json = "*"
