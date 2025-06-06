@@ -82,43 +82,57 @@
 
                 const text = await file.text();
 
-                // Use the actual Rust function here:
-                const result = verify_all_program_proof(text);
-                const pubInput = result.slice(0, 8)
-                const progOutput = result.slice(8);
+                try {
 
-                // Display public input
-                const pubHex = u32ArrayToHex(pubInput);
-                document.getElementById("publicInput").textContent = pubHex.join(', ');
+                    // Use the actual Rust function here:
+                    const result = verify_all_program_proof(text);
+                    // Ensure it's an array with at least 16 elements
+                    if (!Array.isArray(result) || result.length !== 16) {
+                        throw new Error("Unexpected result format: expected array of length 16");
+                    }
+                    const pubInput = result.slice(0, 8)
+                    const progOutput = result.slice(8);
 
-                // Display program output
-                const outHex = u32ArrayToHex(progOutput);
-                document.getElementById("programOutput").textContent = outHex.join(', ');
+                    // Display public input
+                    const pubHex = u32ArrayToHex(pubInput);
+                    document.getElementById("publicInput").textContent = pubHex.join(', ');
 
-                // Compare with known hashes
-                const tbody = document.getElementById("knownHashes");
-                tbody.innerHTML = '';
-                knownHashes.forEach(entry => {
-                    const isMatch = arraysEqual(entry.values, progOutput);
-                    const row = document.createElement("tr");
+                    // Display program output
+                    const outHex = u32ArrayToHex(progOutput);
+                    document.getElementById("programOutput").textContent = outHex.join(', ');
 
-                    const name = document.createElement("td");
-                    name.textContent = entry.name;
+                    // Compare with known hashes
+                    const tbody = document.getElementById("knownHashes");
+                    tbody.innerHTML = '';
+                    knownHashes.forEach(entry => {
+                        const isMatch = arraysEqual(entry.values, progOutput);
+                        const row = document.createElement("tr");
 
-                    const vals = document.createElement("td");
-                    vals.textContent = u32ArrayToHex(entry.values).join(', ');
+                        const name = document.createElement("td");
+                        name.textContent = entry.name;
 
-                    const status = document.createElement("td");
-                    status.textContent = isMatch ? "✅ Match" : "❌ No Match";
-                    status.className = isMatch ? "match" : "no-match";
+                        const vals = document.createElement("td");
+                        vals.textContent = u32ArrayToHex(entry.values).join(', ');
 
-                    row.appendChild(name);
-                    row.appendChild(vals);
-                    row.appendChild(status);
-                    tbody.appendChild(row);
-                });
+                        const status = document.createElement("td");
+                        status.textContent = isMatch ? "✅ Match" : "❌ No Match";
+                        status.className = isMatch ? "match" : "no-match";
 
-                document.getElementById("results").style.display = "block";
+                        row.appendChild(name);
+                        row.appendChild(vals);
+                        row.appendChild(status);
+                        tbody.appendChild(row);
+                    });
+
+                    document.getElementById("results").style.display = "block";
+                } catch (err) {
+                    console.error("WASM call failed:", err);
+                    alert("An error occurred while processing the file:\n\n" + err.message);
+
+                    // 🔒 Hide any output
+                    document.getElementById("results").style.display = "none";
+
+                }
             });
         }
 
