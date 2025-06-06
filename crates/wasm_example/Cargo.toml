@@ -22,3 +22,6 @@ field = { path = "../../../zksync-airbender-2/field", features=["no_inline"]}
 getrandom = { version = "0.3",  features = ["wasm_js"]}
 serde = { version = "1", default-features = false, features = ["derive", "alloc"] }
 serde_json = "*"
+
+base64 = "0.21.7"
+bincode = "1.3.3"

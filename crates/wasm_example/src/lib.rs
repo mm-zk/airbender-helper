@@ -1,13 +1,33 @@
-pub fn add(left: u64, right: u64) -> u64 {
-    left + right
-}
-
+use execution_utils::ProgramProof;
 use js_sys::Array;
+use serde_json::Result;
 use wasm_bindgen::prelude::*;
 
-#[wasm_bindgen]
-pub fn greet(name: &str) -> String {
-    format!("Hello, {}!", name)
+#[derive(serde::Deserialize, serde::Serialize, Debug)]
+pub struct SequencerProof {
+    block_number: usize,
+    proof: String,
+}
+
+pub fn guess_program_proof(program_proof_data: &str) -> Option<ProgramProof> {
+    // Try parsing program proof as json directly.
+    let input_program_proof: Result<execution_utils::ProgramProof> =
+        serde_json::from_str(&program_proof_data);
+
+    if let Ok(input_program_proof) = input_program_proof {
+        return Some(input_program_proof);
+    }
+
+    // Try parsing the byte64 encoded version from sequencer.
+    let input: Result<SequencerProof> = serde_json::from_str(&program_proof_data);
+    if let Ok(input) = input {
+        let decoded = base64::decode(&input.proof).expect("Failed to decode base64 program proof");
+        let program_proof: ProgramProof =
+            bincode::deserialize(&decoded).expect("Failed to deserialize program proof");
+        return Some(program_proof);
+    }
+
+    None
 }
 
 #[wasm_bindgen]
@@ -17,8 +37,7 @@ pub fn verify_all_program_proof(program_proof_data: &str) -> Array {
         proof_list_and_metadata_from_program_proof,
     };
 
-    let input_program_proof: execution_utils::ProgramProof =
-        serde_json::from_str(&program_proof_data).expect("Failed to parse program proof as JSON");
+    let input_program_proof = guess_program_proof(program_proof_data).unwrap();
 
     //serde_json::from_str(&input.unwrap()).expect("Failed to parse input_hex into ProgramProof");
     let (metadata, proof_list) = proof_list_and_metadata_from_program_proof(input_program_proof);
