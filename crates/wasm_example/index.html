@@ -34,7 +34,7 @@
         <h2>Public Input</h2>
         <div class="hex-list" id="publicInput"></div>
 
-        <h2>Program Output</h2>
+        <h2>Program Verification key</h2>
         <div class="hex-list" id="programOutput"></div>
 
         <h2>Known Hashes</h2>
@@ -55,12 +55,19 @@
 
         const knownHashes = [
             {
-                name: "Hash A",
-                values: [0xabcdef00, 0xabcdef01, 0xabcdef02, 0xabcdef03, 0xabcdef04, 0xabcdef05, 0xabcdef06, 0xabcdef07]
-            },
-            {
                 name: "zksync os 0.0.1 + airbender 0.0.6",
                 values: [0xc530c9c7, 0xcd177820, 0x68d03325, 0xabfe99f5, 0x0a76c253, 0x7e64e015, 0x32dd94c4, 0x7189f6ba]
+            },
+            {
+                name: "zksync-era (zksync os 0.0.2 rev0) + airbender 0.2.0",
+                values: [4108140866,
+                    224904200,
+                    5485121,
+                    2466424014,
+                    3144074013,
+                    1727165411,
+                    2053591393,
+                    2927148240]
             }
         ];
 
@@ -100,6 +107,10 @@
                     // Display program output
                     const outHex = u32ArrayToHex(progOutput);
                     document.getElementById("programOutput").textContent = outHex.join(', ');
+                    const intOutput = progOutput.join(', ');
+                    const intDiv = document.createElement("div");
+                    intDiv.textContent = `As Integers: ${intOutput}`;
+                    document.getElementById("programOutput").appendChild(intDiv);
 
                     // Compare with known hashes
                     const tbody = document.getElementById("knownHashes");
