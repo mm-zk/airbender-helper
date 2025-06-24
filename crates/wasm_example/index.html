@@ -25,19 +25,25 @@
 </head>
 
 <body>
-    <h1>Fri Verifier (0.0.6)</h1>
+    <h1>Fri Verifier (0.3.0)</h1>
+    <p>This javascript verifies the FRI proofs <strong>locally</strong> in your browser.</p>
     <h3>Please upload program proof file</h3>
+    <p>Usual file names: <strong>recursion_program_proof.json</strong> or <strong>final_program_proof.json</strong></p>
     <input type="file" id="fileInput">
     <button id="processBtn">Process</button>
 
     <div class="section" id="results" style="display:none;">
-        <h2>Public Input</h2>
+        <h2 style="color: green;">Success: Your proof is verified! See details below:</h2>
+        <h2>Public Inputs</h2>
+        <p>This is the output of your program</p>
         <div class="hex-list" id="publicInput"></div>
 
         <h2>Program Verification key</h2>
+        <p>This is your program's verification key - a fingeprint of your program and recursions</p>
         <div class="hex-list" id="programOutput"></div>
 
-        <h2>Known Hashes</h2>
+        <h2>Known Verification keys</h2>
+        <p>These are the known verification keys for zkSync OS and Airbender programs</p>
         <table border="1">
             <thead>
                 <tr>
